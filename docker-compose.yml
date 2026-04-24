@@ -1,0 +1,182 @@
+services:
+
+  kafka:
+    image: apache/kafka:3.8.0
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_FORMAT_LOG_DIRS: "true"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - /var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "kafka", "9092"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks:
+      - monitoring-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8079:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - monitoring-network
+
+
+  # приложение
+  apartmentrentals:
+    build: ./object_service
+    container_name: object_service
+    ports:
+      - "5153:8080"
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__MongoDB=mongodb://mongodb:27017/ApartmentRentals
+    networks:
+      - monitoring-network
+    labels:
+      - "app.name=ApartmentRentals"
+    depends_on:
+      - mongodb
+      - redis 
+
+  user_services:
+    build: ./user_service
+    container_name: users_service
+    ports:
+      - "5155:8080"
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__MongoDB=mongodb://mongodb:27017/ApartmentRentals
+    networks:
+      - monitoring-network
+    labels:
+      - "app.name=ApartmentRentals"
+    depends_on:
+      - mongodb
+      - redis     
+
+#Db
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db        
+    networks:
+      - monitoring-network          
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - monitoring-network
+    depends_on:
+      - apartmentrentals
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - monitoring-network
+    depends_on:
+      - prometheus
+
+#Cache
+  redis:
+    image: redis:latest
+    container_name: redis_container
+    # environment:
+    #   - REDIS_PASSWORD=${REDIS_PASSWORD}
+    #   - REDIS_USER=${REDIS_USER}
+    #   - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redisdata:/data
+    networks:
+      - monitoring-network  
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    # command: >
+    #   sh -c '
+    #     mkdir -p /usr/local/etc/redis &&
+    #     echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+    #     echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+    #     echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+    #     echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+    #     echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
+    #     echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+    #     redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+    #   '
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  monitoring-network:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  mongo_data:
