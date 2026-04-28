@@ -12,14 +12,19 @@ namespace ApartmentRentals.KafkaConsumer {
 
     public class KafkaConsumer : BackgroundService
     {
-        private readonly KafkaSettings _consumerSettings;
+        private readonly KafkaConsumerSettings _consumerSettings;
         private readonly IServiceScopeFactory _scopeFactory;
+
+        private readonly ILogger<KafkaConsumer> _logger;
         private readonly string _topic;
         //private static readonly Counter receivedObjecsCounter = Metrics.CreateCounter("client_serv_obj_received", "Received objects count");
-        public KafkaConsumer(IServiceScopeFactory scopeFactory, IOptions<KafkaSettings> settings)
+        public KafkaConsumer(ILogger<KafkaConsumer> logger, IServiceScopeFactory scopeFactory, IOptions<KafkaConsumerSettings> settings)
         {
+            _logger = logger;
+
             _scopeFactory = scopeFactory;
-            _topic = settings.Value.ProducerTopic;
+            _topic = settings.Value.UserServiceTopic;
+            //_logger.LogInformation($"Initialize Consumer, {settings.Value.ProducerTopic}");
             _consumerSettings = settings.Value;
         }
 
@@ -27,16 +32,20 @@ namespace ApartmentRentals.KafkaConsumer {
         {
             await Task.Delay(3000, cancellationToken);
 
+            _logger.LogInformation("ExecuteAsync");
+
             IConsumer<string, string> consumer = null;
             try
             {
                 var config = new ConsumerConfig
                 {
                     BootstrapServers = _consumerSettings.BootstrapServers,
+                    GroupId = _consumerSettings.ConsumerGroup,
                     AutoOffsetReset = AutoOffsetReset.Earliest,
                     EnableAutoCommit = true,
                     SessionTimeoutMs = 30000
                 };
+                _logger.LogInformation("Try build");
 
                 consumer = new ConsumerBuilder<string, string>(config).Build();
                 consumer.Subscribe(_topic);
@@ -46,6 +55,8 @@ namespace ApartmentRentals.KafkaConsumer {
                     try
                     {
                         var consumeResult = consumer.Consume(TimeSpan.FromMilliseconds(500));
+
+                        _logger.LogInformation($"Consume {consumeResult} from {_topic}");
 
                         if (consumeResult != null && !consumeResult.IsPartitionEOF)
                         {
@@ -58,8 +69,9 @@ namespace ApartmentRentals.KafkaConsumer {
                     }
                 }
             }
-            catch (Exception)
-            { //log it
+            catch (Exception e)
+            {
+                _logger.LogInformation($"Exception {e.Data} {e.Message}");
             }
             finally
             {
@@ -73,11 +85,14 @@ namespace ApartmentRentals.KafkaConsumer {
         {
             try
             {
+                _logger.LogInformation($"start process");
                 var data = JsonSerializer.Deserialize<RegistrationObjectDTO>(message);
+                _logger.LogInformation($"json : {message}   {data}");
                 if (data != null)
                 {
                     using (var scope = _scopeFactory.CreateScope())
                     {
+                        _logger.LogInformation("Process message ");
                         var userService = scope.ServiceProvider.GetRequiredService<UserService>();
                         await userService.registerObject(data);
                     }
@@ -85,9 +100,9 @@ namespace ApartmentRentals.KafkaConsumer {
                     //receivedObjecsCounter.Inc();
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-               //It'll be better to log it
+               _logger.LogInformation($"Exception {e.Data} {e.Message}");
             }
         }
     }

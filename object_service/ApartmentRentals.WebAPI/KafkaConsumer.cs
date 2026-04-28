@@ -3,55 +3,115 @@ using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Options;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using ApartmentRentals.Data.DTOs;
+
+using System.Text.Json;
 
 namespace ApartmentRentals.KafkaConsumer {
+
     public class KafkaConsumer : BackgroundService
     {
-        private readonly KafkaSettings _settings;
+        private readonly KafkaSettings _consumerSettings;
+        private readonly IServiceScopeFactory _scopeFactory;
+
+        private readonly ILogger<KafkaConsumer> _logger;
         private readonly string _topic;
-        public KafkaConsumer(IOptions<KafkaSettings> settings) 
-        { 
-            _settings = settings.Value;
-            _topic = _settings.UserServiceTopic;
+        //private static readonly Counter receivedObjecsCounter = Metrics.CreateCounter("client_serv_obj_received", "Received objects count");
+        public KafkaConsumer(ILogger<KafkaConsumer> logger, IServiceScopeFactory scopeFactory, IOptions<KafkaSettings> settings)
+        {
+            _logger = logger;
+
+            _scopeFactory = scopeFactory;
+            _topic = settings.Value.UserServiceTopic;
+            //_logger.LogInformation($"Initialize Consumer, {settings.Value.ProducerTopic}");
+            _consumerSettings = settings.Value;
         }
 
-        protected override Task ExecuteAsync(CancellationToken cancellationToken)
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            return Task.Run(async () => {
+            await Task.Delay(3000, cancellationToken);
+
+            _logger.LogInformation("ExecuteAsync");
+
+            IConsumer<string, string> consumer = null;
+            try
+            {
                 var config = new ConsumerConfig
                 {
-                    BootstrapServers = _settings.BootstrapServers
-                    //GroupId = _settings.ConsumptionGroupId,
-                    //AutoOffsetReset = AutoOffsetReset.Earliest,
-                    // EnableAutoCommit = true,
-                    // AutoCommitIntervalMs = 5000
+                    BootstrapServers = _consumerSettings.BootstrapServers,
+                    GroupId = _consumerSettings.ConsumerGroup,
+                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                    EnableAutoCommit = true,
+                    SessionTimeoutMs = 30000
                 };
+                _logger.LogInformation("Try build");
 
-                using (var consumer = new ConsumerBuilder<Ignore, string>(config).Build())
+                consumer = new ConsumerBuilder<string, string>(config).Build();
+                consumer.Subscribe(_topic);
+
+                while (!cancellationToken.IsCancellationRequested)
                 {
-
-                    consumer.Subscribe(_topic);
-
-                    while (!cancellationToken.IsCancellationRequested)
+                    try
                     {
-                        var consumeResult = consumer.Consume(cancellationToken);
-                        if (processMessageAsync != null)
+                        var consumeResult = consumer.Consume(TimeSpan.FromMilliseconds(500));
+
+                        _logger.LogInformation($"Consume {consumeResult} from {_topic}");
+
+                        if (consumeResult != null && !consumeResult.IsPartitionEOF)
                         {
-                            await processMessageAsync(consumeResult.Message?.Value);
+                            await ProcessMessageAsync(consumeResult.Message.Value);
                         }
-                        // consumer.Commit(); 
                     }
-                    consumer.Close();
+                    catch (ConsumeException)
+                    {
+                        await Task.Delay(1000, cancellationToken);
+                    }
                 }
-            }, cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogInformation($"Exception {e.Data} {e.Message}");
+            }
+            finally
+            {
+                consumer?.Unsubscribe();
+                consumer?.Close();
+                consumer?.Dispose();
+            }
         }
 
-        public Task processMessageAsync(string str)
+        private async Task ProcessMessageAsync(string message)
         {
-            return Task.CompletedTask;
+            try
+            {
+                var data = JsonSerializer.Deserialize<ReceivedObjectDTO>(message);
+
+                if (data == null) return;
+
+                if (data.ObjType == ObjectType.Event)
+                {
+                    using (var scope = _scopeFactory.CreateScope())
+                    {
+                        var eventService = scope.ServiceProvider.GetRequiredService<IEventService>();
+                        await eventService.UpdateConfirmationAsync(data);
+                    }
+
+                }
+                else
+                {
+                    using (var scope = _scopeFactory.CreateScope())
+                    {
+                        var ticketService = scope.ServiceProvider.GetRequiredService<ITicketService>();
+                        await ticketService.UpdateConfirmationAsync(data);
+                    }
+                }
+
+                //receivedCounter.Inc();
+            }
+            catch (Exception)
+            {
+                //It'll be better to log it
+            }
         }
     }
 }

@@ -12,8 +12,8 @@ namespace ApartmentRentals.UsersService
         private readonly UserRepository<UserDTO> _userRepository;
         private readonly IMapper _mapper;
         private readonly KafkaProducer _producer;
-        private readonly KafkaSettings _producerSettings;
-        public UserService(UserRepository<UserDTO> userRepository, KafkaProducer producer, IOptions<KafkaSettings> producerSettings,
+        private readonly KafkaProducerSettings _producerSettings;
+        public UserService(UserRepository<UserDTO> userRepository, KafkaProducer producer, IOptions<KafkaProducerSettings> producerSettings,
             IMapper mapper) {
             _userRepository = userRepository;
             _mapper = mapper;
@@ -24,6 +24,12 @@ namespace ApartmentRentals.UsersService
         public async Task registerObject(RegistrationObjectDTO reg) {
             var userId = reg.AuthorId;
             var user = await _userRepository.GetByIdAsync(userId);
+
+            await _producer.SendAsync(JsonSerializer.Serialize(new ResponseDTO
+                {
+                    UserId = "",
+                    ObjectId = reg.ObjectId
+                }));
             if (user != null) {
                 user.registered_objects++;
                 await _userRepository.UpdateAsync(userId, user);

@@ -35,7 +35,7 @@ namespace ApartmentRentals.KafkaProducer
             try
             {
                 await _producer.ProduceAsync(_topic, new Message<string, string> { Key = "uniq1", Value = message });
-                _logger.LogInformation("Sending message to {Topic}", _topic);
+                _logger.LogInformation($"Sending {message} to {_topic}");
             } 
             catch(ProduceException<Null,string> ex)
             {

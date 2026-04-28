@@ -1,11 +1,11 @@
 using ApartmentRentals.Models;
 using Confluent.Kafka;
 
-public class KafkaSettings
+public class KafkaConsumerSettings
 {
     public string BootstrapServers { get; set; } = "kafka:9092";
-    public string ProducerTopic {get; set;} = "prod-orders";
-    public string UserServiceTopic {get ; set;} = "user-service-order";
+
+    public string UserServiceTopic {get ; set;} = "prod-orders";
 
     public Acks Acks {get; set;} = Acks.All;
 

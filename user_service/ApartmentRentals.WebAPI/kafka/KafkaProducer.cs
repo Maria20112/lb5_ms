@@ -18,7 +18,7 @@ namespace kafka.KafkaProducer
         private readonly IProducer<string, string> _producer;
         private string _topic;
         private bool isDisposed;
-        public KafkaProducer(ILogger<KafkaProducer> logger, IOptions<KafkaSettings> settings) 
+        public KafkaProducer(ILogger<KafkaProducer> logger, IOptions<KafkaProducerSettings> settings) 
         { 
             _logger = logger;
             var config = new ProducerConfig
@@ -26,7 +26,7 @@ namespace kafka.KafkaProducer
                 BootstrapServers = settings.Value.BootstrapServers
             };
             _producer = new ProducerBuilder<string, string>(config).Build();
-            _topic = settings.Value.UserServiceTopic;
+            _topic = settings.Value.ProducerTopic;
 
         }
 

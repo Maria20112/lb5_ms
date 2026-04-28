@@ -1,4 +1,5 @@
 using ApartmentRentals.Data.Models;
+using ApartmentRentals.Data.DTOs;
 using ApartmentRentals.Models;
 using ApartmentRentals.WebAPI.Services;
 using ApartmentRentals.WebAPI.Services.Repositories;
@@ -10,6 +11,7 @@ using StackExchange.Redis;
 using kafka.KafkaProducer;
 using ApartmentRentals.KafkaConsumer;
 using Confluent.Kafka;
+using ApartmentRentals.UsersService;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ApartmentRentals.Tests")]
 
@@ -34,14 +36,14 @@ builder.Services.AddControllers(options =>
     options.SuppressAsyncSuffixInActionNames = false;
 });
 
-builder.Services.AddOptions<KafkaSettings>()
+builder.Services.AddOptions<KafkaProducerSettings>()
     .Bind(builder.Configuration.GetSection("KafkaProducer"))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
 builder.Services.AddSingleton(sp =>
 {
-    var kafkaProducerSettings = sp.GetRequiredService<IOptions<KafkaSettings>>().Value;
+    var kafkaProducerSettings = sp.GetRequiredService<IOptions<KafkaProducerSettings>>().Value;
     var config = new ProducerConfig
     {
         BootstrapServers = kafkaProducerSettings.BootstrapServers,
@@ -61,7 +63,7 @@ builder.Services.AddSingleton(sp =>
 builder.Services.AddScoped<IKafkaProducer, KafkaProducer>();
 builder.Services.AddSingleton<KafkaProducer>();
 
-builder.Services.AddOptions<KafkaSettings>()
+builder.Services.AddOptions<KafkaConsumerSettings>()
     .Bind(builder.Configuration.GetSection("KafkaConsumer"))
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -75,6 +77,16 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
 {
     return new MongoClient(sp.GetRequiredService<IOptions<MongoDbContext>>().Value.ConnectionString);
 });
+
+builder.Services.AddScoped<IMongoDatabase>(sp =>
+{
+    var client = sp.GetRequiredService<IMongoClient>();
+    var databaseName = "ApartmentRentalsUsers";
+    return client.GetDatabase(databaseName);
+});
+
+builder.Services.AddScoped<UserRepository<UserDTO>>();
+builder.Services.AddScoped<UserService>();
 
 // === регистрируем кэш ===
 builder.Services.AddStackExchangeRedisCache(options =>
