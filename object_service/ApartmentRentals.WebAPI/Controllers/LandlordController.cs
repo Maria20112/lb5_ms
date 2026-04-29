@@ -3,7 +3,7 @@ using ApartmentRentals.Data.Models;
 using ApartmentRentals.WebAPI.Services.Repositories;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using ApartmentRentals.KafkaProducer;
+using ApartmentRentals.kafka.KafkaProducer;
 using System.Text.Json;
 
 [Route("api/[controller]")]
@@ -51,9 +51,8 @@ public class LandlordController : ControllerBase
     public async Task<IActionResult> CreateAsync(LandlordNoIdDTO dto)
     {
         var landlord = _mapper.Map<Landlord>(dto);
-
-        _producer.SendAsync(JsonSerializer.Serialize(landlord));
         await _landlordService.CreateAsync(landlord);
+        SendRegRequest(landlord);
 
         return CreatedAtAction(nameof(GetAsync), new { id = landlord.Id }, landlord);
     }
@@ -70,5 +69,17 @@ public class LandlordController : ControllerBase
     {
         await _landlordService.DeleteAllAsync();
         return Ok();
+    }
+    private void SendRegRequest(Landlord l) {
+        RegistrationObjectDTO reg = new RegistrationObjectDTO()
+        {
+            Type = ObjectType.Landlord,
+            Id = l.Id,
+            AuthorId = l.AuthorId
+        };
+
+        string message = JsonSerializer.Serialize(reg);
+
+        _producer.SendAsync(message);
     }
 }

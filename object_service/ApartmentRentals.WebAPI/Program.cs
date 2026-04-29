@@ -7,8 +7,10 @@ using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Prometheus;
 using StackExchange.Redis;
-using ApartmentRentals.KafkaProducer;
+using ApartmentRentals.kafka.KafkaProducer;
+using ApartmentRentals.KafkaConsumer;
 using Confluent.Kafka;
+using ApartmentRentals.Services;
 
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ApartmentRentals.Tests")]
@@ -61,6 +63,17 @@ builder.Services.AddSingleton(sp =>
 builder.Services.AddScoped<IKafkaProducer, KafkaProducer>();
 builder.Services.AddSingleton<KafkaProducer>();
 
+builder.Services.AddOptions<KafkaSettings>()
+    .Bind(builder.Configuration.GetSection("KafkaConsumer"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddHostedService<KafkaConsumer>();
+
+builder.Services.AddScoped<LandlordService>();
+builder.Services.AddScoped<TenantService>();
+builder.Services.AddScoped<SpaceService>();
+builder.Services.AddScoped<RentalContractService>();
+
 // === Регистрируем бд ===
 builder.Services.Configure<MongoDbContext>(
     builder.Configuration.GetSection("SpaceStoreDatabase"));
@@ -68,6 +81,7 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
 {
     return new MongoClient(sp.GetRequiredService<IOptions<MongoDbContext>>().Value.ConnectionString);
 });
+
 
 // === регистрируем кэш ===
 builder.Services.AddStackExchangeRedisCache(options =>

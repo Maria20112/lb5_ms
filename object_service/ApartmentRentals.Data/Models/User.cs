@@ -16,5 +16,7 @@ namespace ApartmentRentals.Data.Models
         public string Phone { get; set; } = string.Empty;
         [BsonElement("email")]
         public string Email { get; set; } = string.Empty;
+        public RegistrationStatus RegStatus {get; set;}
+        public string AuthorId {get; set;} = string.Empty;
     }
 }

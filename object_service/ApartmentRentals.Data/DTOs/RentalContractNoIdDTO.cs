@@ -1,4 +1,6 @@
-﻿namespace ApartmentRentals.Data.DTOs
+﻿using ApartmentRentals.Data.Models;
+
+namespace ApartmentRentals.Data.DTOs
 {
     public class RentalContractNoIdDTO
     {
@@ -7,5 +9,8 @@
 
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+
+        public string AuthorId {get; set;} = "string";
+        public RegistrationStatus RegStatus {get; init;}
     }
 }

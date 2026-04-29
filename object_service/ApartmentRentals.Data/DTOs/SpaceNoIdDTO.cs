@@ -32,5 +32,8 @@ namespace ApartmentRentals.Data.DTOs
 
         // Связи
         public int LandlordId { get; set; } = 0;
+
+        public string AuthorId {get; set;} = "string";
+        public RegistrationStatus RegStatus {get; init;}
     }
 }

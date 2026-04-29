@@ -4,6 +4,8 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using ApartmentRentals.WebAPI.Services.Repositories;
+using ApartmentRentals.kafka.KafkaProducer;
+using System.Text.Json;
 
 namespace ApartmentRentals.WebAPI.Controllers
 {
@@ -15,8 +17,11 @@ namespace ApartmentRentals.WebAPI.Controllers
         private readonly IRepository<Space> _spaceService;
         private readonly IMapper _mapper;
 
-        public SpaceController(IRepository<Space> spaceService, IMapper mapper)
+        private readonly KafkaProducer _producer;
+
+        public SpaceController(KafkaProducer producer, IRepository<Space> spaceService, IMapper mapper)
         {
+            _producer = producer;
             _spaceService = spaceService;
             _mapper = mapper;
         }
@@ -65,6 +70,7 @@ namespace ApartmentRentals.WebAPI.Controllers
             var space = _mapper.Map<Space>(s);
 
             await _spaceService.CreateAsync(space);
+           SendRegRequest(space);
 
             return CreatedAtAction(nameof(GetAsync), new { id = space.Id }, space);
         }
@@ -83,5 +89,18 @@ namespace ApartmentRentals.WebAPI.Controllers
             await _spaceService.DeleteAllAsync();
             return Ok();
         }
+
+    private void SendRegRequest(Space space) {
+        RegistrationObjectDTO reg = new RegistrationObjectDTO()
+        {
+            Type = ObjectType.Space,
+            Id = space.Id,
+            AuthorId = space.AuthorId
+        };
+
+        string message = JsonSerializer.Serialize(reg);
+
+        _producer.SendAsync(message);
     }
+}
 }

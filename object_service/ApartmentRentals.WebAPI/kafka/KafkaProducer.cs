@@ -5,7 +5,7 @@ using System;
 using System.Threading.Tasks;
 using System.ComponentModel;
 
-namespace ApartmentRentals.KafkaProducer
+namespace ApartmentRentals.kafka.KafkaProducer
 {
     public interface IKafkaProducer : IDisposable
     {

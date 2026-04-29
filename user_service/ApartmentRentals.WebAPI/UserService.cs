@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using AutoMapper;
 using kafka.KafkaProducer;
+using System.Runtime.InteropServices.ObjectiveC;
 
 namespace ApartmentRentals.UsersService
 {
@@ -25,11 +26,6 @@ namespace ApartmentRentals.UsersService
             var userId = reg.AuthorId;
             var user = await _userRepository.GetByIdAsync(userId);
 
-            await _producer.SendAsync(JsonSerializer.Serialize(new ResponseDTO
-                {
-                    UserId = "",
-                    ObjectId = reg.ObjectId
-                }));
             if (user != null) {
                 user.registered_objects++;
                 await _userRepository.UpdateAsync(userId, user);
@@ -37,7 +33,8 @@ namespace ApartmentRentals.UsersService
                 await _producer.SendAsync(JsonSerializer.Serialize(new ResponseDTO
                 {
                     UserId = userId,
-                    ObjectId = reg.ObjectId
+                    Type = reg.Type,
+                    ObjectId = reg.Id
                 }));
             }
         }

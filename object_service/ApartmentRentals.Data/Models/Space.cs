@@ -53,5 +53,8 @@ namespace ApartmentRentals.Data.Models
         [BsonElement("LandlordId")]
         public string LandlordId { get; set; } = "0";
         public DateTime PublishedAt { get; set; } = DateTime.Now;
+
+        public RegistrationStatus RegStatus {get; set;}
+        public string AuthorId {get; set;} = string.Empty;
     }
 }

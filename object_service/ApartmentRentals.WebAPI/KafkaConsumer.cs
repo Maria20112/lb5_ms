@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Options;
 using ApartmentRentals.Data.DTOs;
+using ApartmentRentals.Services;
 
 using System.Text.Json;
 
@@ -55,7 +56,7 @@ namespace ApartmentRentals.KafkaConsumer {
                     {
                         var consumeResult = consumer.Consume(TimeSpan.FromMilliseconds(500));
 
-                        _logger.LogInformation($"Consume {consumeResult} from {_topic}");
+                        //_logger.LogInformation($"Consume {consumeResult} from {_topic}");
 
                         if (consumeResult != null && !consumeResult.IsPartitionEOF)
                         {
@@ -86,31 +87,47 @@ namespace ApartmentRentals.KafkaConsumer {
             {
                 var data = JsonSerializer.Deserialize<ReceivedObjectDTO>(message);
 
+                _logger.LogInformation($"Consume {data.Type} from {_topic}");
+
                 if (data == null) return;
 
-                if (data.ObjType == ObjectType.Event)
+                if (data.Type == ObjectType.Landlord)
                 {
                     using (var scope = _scopeFactory.CreateScope())
                     {
-                        var eventService = scope.ServiceProvider.GetRequiredService<IEventService>();
-                        await eventService.UpdateConfirmationAsync(data);
+                        var landlordService = scope.ServiceProvider.GetRequiredService<LandlordService>();
+                        await landlordService.UpdateRegistrationAsync(data);
                     }
-
                 }
-                else
+                if (data.Type == ObjectType.Tenant)
                 {
                     using (var scope = _scopeFactory.CreateScope())
                     {
-                        var ticketService = scope.ServiceProvider.GetRequiredService<ITicketService>();
-                        await ticketService.UpdateConfirmationAsync(data);
+                        var tenantService = scope.ServiceProvider.GetRequiredService<TenantService>();
+                        await tenantService.UpdateRegistrationAsync(data);
                     }
                 }
-
+                if (data.Type == ObjectType.Space)
+                {
+                    using (var scope = _scopeFactory.CreateScope())
+                    {
+                        var spaceService = scope.ServiceProvider.GetRequiredService<SpaceService>();
+                        await spaceService.UpdateRegistrationAsync(data);
+                    }
+                }
+                if (data.Type == ObjectType.RentalContract)
+                {
+                    using (var scope = _scopeFactory.CreateScope())
+                    {
+                        var rcService = scope.ServiceProvider.GetRequiredService<RentalContractService>();
+                        await rcService.UpdateRegistrationAsync(data);
+                    }
+                }
                 //receivedCounter.Inc();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                //It'll be better to log it
+                _logger.LogInformation($"Exception {e.Data} {e.Message}");
             }
         }
     }

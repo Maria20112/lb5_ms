@@ -12,6 +12,9 @@ namespace ApartmentRentals.Data.Models
         public DateTime StartDate { get; set; }
         [BsonElement("endDate")]
         public DateTime EndDate { get; set; }
+
+        public RegistrationStatus RegStatus {get; set;}
+        public string AuthorId {get; set;} = string.Empty;
         //public decimal FinalPrice { get; set; } //Итоговая цена
     }
 }

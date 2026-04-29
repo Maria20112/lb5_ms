@@ -3,6 +3,8 @@ using ApartmentRentals.Data.Models;
 using ApartmentRentals.WebAPI.Services.Repositories;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using ApartmentRentals.kafka.KafkaProducer;
+using System.Text.Json;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -11,8 +13,11 @@ public class RentalContractController : ControllerBase
     private readonly IRepository<RentalContract> _rentalService;
     private readonly IMapper _mapper;
 
-    public RentalContractController(IRepository<RentalContract> rentalService, IMapper mapper)
+    private readonly KafkaProducer _producer;
+
+    public RentalContractController(KafkaProducer producer, IRepository<RentalContract> rentalService, IMapper mapper)
     {
+        _producer = producer;
         _rentalService = rentalService;
         _mapper = mapper;
     }
@@ -49,6 +54,7 @@ public class RentalContractController : ControllerBase
         var rentalContract = _mapper.Map<RentalContract>(dto);
 
         await _rentalService.CreateAsync(rentalContract);
+        SendRegRequest(rentalContract);
 
         return CreatedAtAction(nameof(GetAsync), new { id = rentalContract.Id }, rentalContract);
     }
@@ -65,5 +71,18 @@ public class RentalContractController : ControllerBase
     {
         await _rentalService.DeleteAllAsync();
         return Ok();
+    }
+
+    private void SendRegRequest(RentalContract rentalContract) {
+        RegistrationObjectDTO reg = new RegistrationObjectDTO()
+        {
+            Type = ObjectType.RentalContract,
+            Id = rentalContract.Id,
+            AuthorId = rentalContract.AuthorId
+        };
+
+        string message = JsonSerializer.Serialize(reg);
+
+        _producer.SendAsync(message);
     }
 }
