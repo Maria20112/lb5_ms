@@ -3,6 +3,7 @@ using ApartmentRentals.Data.Models;
 
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ApartmentRentals.Tests;
 
@@ -29,7 +30,8 @@ public class ApiTests : TestsBase<Program>
             {
                 Name = "tenant",
                 Email = "tenant@test.com",
-                Phone = "+7000000000"
+                Phone = "+7000000000",
+                AuthorId = "string"
             };
 
             var content = new StringContent(
@@ -57,7 +59,8 @@ public class ApiTests : TestsBase<Program>
             {
                 Name = "tenant",
                 Email = "tenant@test.com",
-                Phone = "+7000000000"
+                Phone = "+7000000000",
+                AuthorId = "string"
             };
 
             var content = new StringContent(
