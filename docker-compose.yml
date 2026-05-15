@@ -81,6 +81,19 @@ services:
       - mongodb
       - redis     
 
+  apigateway:
+    build: ./ApiGateway
+    container_name: api_gateway  # ← добавьте явное имя
+    ports:
+      - "5206:8080"  # ← хост:5206, контейнер:8080
+    environment:
+      - ASPNETCORE_URLS=http://+:8080  # ← контейнер слушает 8080
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - apartmentrentals
+      - user_services
+    networks:
+      - monitoring-network
 #Db
   mongodb:
     image: mongo:7.0
