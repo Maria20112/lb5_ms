@@ -50,8 +50,8 @@ services:
   apartmentrentals:
     build: ./object_service
     container_name: object_service
-    ports:
-      - "5153:8080"
+    expose:
+       - "8080"
     environment:
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_ENVIRONMENT=Development
@@ -67,8 +67,8 @@ services:
   user_services:
     build: ./user_service
     container_name: users_service
-    ports:
-      - "5155:8080"
+    expose:
+       - "8080"
     environment:
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_ENVIRONMENT=Development
@@ -83,17 +83,35 @@ services:
 
   apigateway:
     build: ./ApiGateway
-    container_name: api_gateway  # ← добавьте явное имя
+    container_name: api_gateway  
     ports:
-      - "5206:8080"  # ← хост:5206, контейнер:8080
+      - "5001:8080"  
     environment:
       - ASPNETCORE_URLS=http://+:8080  # ← контейнер слушает 8080
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
       - apartmentrentals
       - user_services
+      - auth
     networks:
       - monitoring-network
+
+  auth:
+    build: ./AuthService
+    container_name: auth_service
+    expose:
+       - "8080"
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__MongoDB=mongodb://mongodb:27017/AuthStore
+    networks:
+      - monitoring-network
+    labels:
+      - "app.name=AuthService"
+    depends_on:
+      - mongodb
+      
 #Db
   mongodb:
     image: mongo:7.0

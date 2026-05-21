@@ -11,6 +11,7 @@ using ApartmentRentals.kafka.KafkaProducer;
 using ApartmentRentals.KafkaConsumer;
 using Confluent.Kafka;
 using ApartmentRentals.Services;
+using Microsoft.OpenApi.Models;
 
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ApartmentRentals.Tests")]
@@ -22,7 +23,28 @@ var builder = WebApplication.CreateBuilder(args);
 //builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "MS_Lab", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: 'Bearer 12345abcdef'",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer"
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            new List<string>()
+        }
+    });
+});
 
 // Настраиваем авто маппер
 builder.Services.AddAutoMapper(cfg =>
