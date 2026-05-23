@@ -69,7 +69,7 @@ namespace AuthService
             var refreshClaims = DecodeRefreshToken(refreshToken);
 
             if (userId != refreshClaims.userId) throw new UnauthorizedAccessException();
-            if (!await repository.ExistsAsync(userId)) throw new UnauthorizedAccessException();
+            if ((await repository.GetByIdAsync(userId)) == null) throw new UnauthorizedAccessException();
             var user = await repository.GetByIdAsync(userId);
             if (refreshClaims.version != user.Version)
                 throw new UnauthorizedAccessException();

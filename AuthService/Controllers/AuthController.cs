@@ -43,7 +43,6 @@ namespace AuthService.Controllers
             }
         }
 
-        [Authorize]
         [HttpPost("refresh")]
         public async Task<ActionResult<ResponseDTO>> RefreshAsync(RefreshRequestDTO dto)
         {
@@ -60,7 +59,7 @@ namespace AuthService.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized();
+                return Unauthorized("afrer process");
             }
             catch (BadHttpRequestException ex)
             {
@@ -68,7 +67,6 @@ namespace AuthService.Controllers
             }
         }
 
-        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<ActionResult<ResponseDTO>> CreateAsync(RequestDTO dto)
         {
