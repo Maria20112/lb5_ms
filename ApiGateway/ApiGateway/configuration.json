@@ -79,6 +79,32 @@
       "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
     },
     {
+      "DownstreamPathTemplate": "/Auth/changepass",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Auth/changepass",
+      "UpstreamHttpMethod": [ "PATCH" ],
+      "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+    },
+    {
+      "DownstreamPathTemplate": "/Auth/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Auth/{id}",
+      "UpstreamHttpMethod": [ "DELETE" ],
+      "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+    },
+    {
       "DownstreamPathTemplate": "/Auth/login",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [

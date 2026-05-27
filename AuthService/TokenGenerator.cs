@@ -68,9 +68,9 @@ namespace AuthService
 
             var refreshClaims = DecodeRefreshToken(refreshToken);
 
+            if (RefreshExpires != refreshClaims.expires) throw new UnauthorizedAccessException();
             if (userId != refreshClaims.userId) throw new UnauthorizedAccessException();
-            if ((await repository.GetByIdAsync(userId)) == null) throw new UnauthorizedAccessException();
-            var user = await repository.GetByIdAsync(userId);
+            var user = await repository.GetByIdAsync(userId) ?? throw new UnauthorizedAccessException();
             if (refreshClaims.version != user.Version)
                 throw new UnauthorizedAccessException();
 
@@ -80,13 +80,14 @@ namespace AuthService
         private string? GetUserIdFromToken(string token) => new JwtSecurityTokenHandler().ReadJwtToken(token).
             Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier)?.Value;
 
-        private (string userId, int version) DecodeRefreshToken(string token)
+        private (string userId, int version, int expires) DecodeRefreshToken(string token)
         {
             try
             {
                 var claims = new JwtSecurityTokenHandler().ReadJwtToken(token).Claims;
                 return (claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier).Value,
-                int.Parse(claims.FirstOrDefault(x => x.Type == ClaimTypes.Version).Value));
+                int.Parse(claims.FirstOrDefault(x => x.Type == ClaimTypes.Version).Value),
+                int.Parse(claims.First(c => c.Type == "exp").Value));
             }
             catch (Exception ex)
             {

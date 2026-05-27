@@ -1,6 +1,5 @@
 using AuthService.Db;
 using AuthService.DTO;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Controllers
@@ -82,5 +81,12 @@ namespace AuthService.Controllers
 
             return Created();
         }
+
+        [HttpPatch("changepass")]
+        public async Task<ActionResult<ResponseDTO>> ChangePassAsync(RequestDTO dto) =>
+            await repository.ChangePassAsync(dto.Email, dto.Pass) ? NoContent() : NotFound();
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id) => await repository.DeleteByIdAsync(id) ? NoContent() : NotFound();
     }
 }

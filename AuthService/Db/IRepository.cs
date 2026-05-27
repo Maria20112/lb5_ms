@@ -6,5 +6,7 @@
         Task<T?> GetByEmailAsync(string email);
         Task CreateAsync(T entity);
         Task<bool> ExistsAsync(string email);
+        Task<bool> ChangePassAsync(string email, string password);
+        Task<bool> DeleteByIdAsync(string id);
     }
 }
