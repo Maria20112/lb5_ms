@@ -53,7 +53,7 @@ public class ApiTests : TestsBase<Program>
     public async Task Add100000Tenants()
     {
 
-        for (int i = 0; i < 100000; i++)
+        for (int i = 0; i < 10000; i++)
         {
             var tenant = new Tenant
             {

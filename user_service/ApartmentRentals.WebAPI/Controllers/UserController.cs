@@ -8,24 +8,24 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 public class UserController : ControllerBase
 {
-    private readonly UserRepository<UserDTO> _landlordService;
+    private readonly UserRepository<UserDTO> _userService;
     private readonly IMapper _mapper;
 
     public UserController(UserRepository<UserDTO> landlordService, IMapper mapper)
     {
-        _landlordService = landlordService;
+        _userService = landlordService;
         _mapper = mapper;
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<UserDTO>>> GetAllAsync() => (await _landlordService.GetAllAsync()).ToList();
+    public async Task<ActionResult<List<UserDTO>>> GetAllAsync() => (await _userService.GetAllAsync()).ToList();
 
     [HttpGet("filter")]
     public async Task<IActionResult> GetFilteredByPropertyAsync([FromQuery] string propertyName, [FromQuery] string value)
     {
         try
         {
-            return Ok(await _landlordService.GetFilteredByPropertyAsync(propertyName, value));
+            return Ok(await _userService.GetFilteredByPropertyAsync(propertyName, value));
         }
         catch (PropertyFilterException ex)
         {
@@ -36,34 +36,34 @@ public class UserController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<UserDTO>> GetAsync(string id)
     {
-        var landlord = await _landlordService.GetByIdAsync(id);
+        var current_user = await _userService.GetByIdAsync(id);
 
-        if (landlord == null) return NotFound();
+        if (current_user == null) return NotFound();
 
-        return Ok(landlord);
+        return Ok(current_user);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateAsync(UserDTO dto)
     {
-        var landlord = _mapper.Map<UserDTO>(dto);
+        var current_user = _mapper.Map<UserDTO>(dto);
 
-        await _landlordService.CreateAsync(landlord);
+        await _userService.CreateAsync(current_user);
 
-        return CreatedAtAction(nameof(GetAsync), new { id = landlord.Id }, landlord);
+        return CreatedAtAction(nameof(GetAsync), new { id = current_user.Id }, current_user);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateAsync(string id, UserDTO dto) => 
-        await _landlordService.UpdateAsync(id, _mapper.Map<UserDTO>(dto)) ? NoContent() : NotFound();
+        await _userService.UpdateAsync(id, _mapper.Map<UserDTO>(dto)) ? NoContent() : NotFound();
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id) => await _landlordService.DeleteByIdAsync(id) ? NoContent() : NotFound();
+    public async Task<IActionResult> Delete(string id) => await _userService.DeleteByIdAsync(id) ? NoContent() : NotFound();
 
     [HttpDelete]
     public async Task<IActionResult> DeleteAll()
     {
-        await _landlordService.DeleteAllAsync();
+        await _userService.DeleteAllAsync();
         return Ok();
     }
 }

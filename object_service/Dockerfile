@@ -1,9 +1,8 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
-EXPOSE 8081
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS final
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
@@ -15,7 +14,6 @@ COPY ["ApartmentRentals.Tests/ApartmentRentals.Tests.csproj", "ApartmentRentals.
 COPY . .
 
 RUN dotnet restore "ApartmentRentals.sln"
-RUN dotnet build "ApartmentRentals.sln" -c $BUILD_CONFIGURATION
 
 WORKDIR "/src/ApartmentRentals.WebAPI"
 RUN dotnet publish "ApartmentRentals.WebAPI.csproj" \
@@ -23,13 +21,8 @@ RUN dotnet publish "ApartmentRentals.WebAPI.csproj" \
     -o /app/publish \
     /p:UseAppHost=false
 
-# FROM base AS final
-# WORKDIR /app
-# COPY --from=build /app/publish .
-
-WORKDIR /app/publish
-
-ENV ASPNETCORE_URLS=http://+:8080
-ENV ASPNETCORE_ENVIRONMENT=Development
+FROM base AS final
+WORKDIR /app
+COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "ApartmentRentals.WebAPI.dll"]

@@ -22,7 +22,6 @@ public class UserRepository<T> : IRepository<T> where T : UserDTO
 
         public async Task CreateAsync(T entity)
         {
-            //entity.Id = _nextId++;
             await _users.InsertOneAsync(entity);
         }
 
