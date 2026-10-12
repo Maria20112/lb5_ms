@@ -8,8 +8,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # Первое приложение
   - job_name: 'apartmentrentals'
     static_configs:
-      - targets: ['apartmentrentals:8080', 'user_services:8080', 'auth:8080']  # Имя контейнера + внутренний порт
+      - targets: ['apartmentrentals:8080', 'user_services:8080']  # Имя контейнера + внутренний порт
     metrics_path: '/metrics'
